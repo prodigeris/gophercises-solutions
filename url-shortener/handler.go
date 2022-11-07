@@ -1,6 +1,8 @@
 package urlshort
 
 import (
+	"gopkg.in/yaml.v3"
+	"log"
 	"net/http"
 )
 
@@ -11,9 +13,26 @@ import (
 // If the path is not provided in the map, then the fallback
 // http.Handler will be called instead.
 func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.HandlerFunc {
-	return func(writer http.ResponseWriter, request *http.Request) {
-		fallback.ServeHTTP(writer, request)
+	mux := http.NewServeMux()
+	for path, url := range pathsToUrls {
+		mux.HandleFunc(path, func(writer http.ResponseWriter, request *http.Request) {
+			http.Redirect(writer, request, url, 308)
+		})
 	}
+
+	return func(writer http.ResponseWriter, request *http.Request) {
+		h, s := mux.Handler(request)
+		if s != "" {
+			h.ServeHTTP(writer, request)
+		} else {
+			fallback.ServeHTTP(writer, request)
+		}
+	}
+}
+
+type Route struct {
+	Path string `yaml:"path"`
+	Url  string `yaml:"url"`
 }
 
 // YAMLHandler will parse the provided YAML and then return
@@ -33,7 +52,26 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 // See MapHandler to create a similar http.HandlerFunc via
 // a mapping of paths to urls.
 func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
+
+	routes := make([]Route, 0)
+	if err := yaml.Unmarshal(yml, &routes); err != nil {
+		log.Fatal(err)
+	}
+
+	mux := http.NewServeMux()
+
+	for _, route := range routes {
+		mux.HandleFunc(route.Path, func(writer http.ResponseWriter, request *http.Request) {
+			http.Redirect(writer, request, route.Url, 308)
+		})
+	}
+
 	return func(writer http.ResponseWriter, request *http.Request) {
-		fallback.ServeHTTP(writer, request)
+		h, s := mux.Handler(request)
+		if s != "" {
+			h.ServeHTTP(writer, request)
+		} else {
+			fallback.ServeHTTP(writer, request)
+		}
 	}, nil
 }
