@@ -2,7 +2,6 @@ package urlshort
 
 import (
 	"gopkg.in/yaml.v3"
-	"log"
 	"net/http"
 )
 
@@ -55,7 +54,7 @@ func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
 
 	routes := make([]Route, 0)
 	if err := yaml.Unmarshal(yml, &routes); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	mux := http.NewServeMux()
