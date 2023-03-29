@@ -17,7 +17,7 @@ func main() {
 	for _, row := range data {
 		q := row[0]
 		a := row[1]
-		fmt.Println(q)
+		fmt.Println(q + " = ?")
 		var i string
 		_, err := fmt.Scanln(&i)
 		if err != nil {
